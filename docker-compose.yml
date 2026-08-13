@@ -1,0 +1,131 @@
+---
+x-ignition-common: &ignition-common
+  image: &ignition-image inductiveautomation/ignition:8.3.7
+  depends_on:
+    bootstrap:
+      condition: service_completed_successfully
+  networks:
+    proxy: {}
+
+x-ignition-environment: &ignition-environment
+  ACCEPT_IGNITION_EULA: "Y"
+  IGNITION_EDITION: standard
+  TZ: ${TZ}
+  STACK_NAME: ${STACK_NAME}
+
+
+services:
+  bootstrap:
+    image: *ignition-image
+    # user: root
+    entrypoint: ["/bin/bash", "/docker-bootstrap.sh"]
+    volumes:
+      - ./scripts/docker-bootstrap.sh:/docker-bootstrap.sh
+      - distributor-data:/seed/${STACK_NAME}-distributor
+      - engine-data:/seed/${STACK_NAME}-engine
+      - transmission-data:/seed/${STACK_NAME}-transmission
+
+  distributor:
+    <<: [*ignition-common]
+    volumes:
+      - distributor-data:/usr/local/bin/ignition/data
+      - ./services/distributor/projects:/usr/local/bin/ignition/data/projects
+      # Resource collections
+      - ./services/distributor/config/resources/core:/usr/local/bin/ignition/data/config/resources/core
+      - ./services/distributor/config/resources/dev:/usr/local/bin/ignition/data/config/resources/dev
+      # Modules
+      - ./shared/modules/MQTT-Distributor-signed-5.0.3.modl:/usr/local/bin/ignition/user-lib/modules/MQTT-Distributor-signed.modl
+    environment:
+      <<: *ignition-environment
+      GATEWAY_MODULES_ENABLED: |
+        com.inductiveautomation.perspective,
+        com.inductiveautomation.opcua,
+        com.cirruslink.mqtt.distributor.gateway
+      ACCEPT_MODULE_LICENSES: com.cirruslink.mqtt.distributor.gateway
+      ACCEPT_MODULE_CERTS: com.cirruslink.mqtt.distributor.gateway
+    labels:
+      - traefik.hostname=${STACK_NAME}-distributor
+      - traefik.enable=true
+    command: >
+      -n ${STACK_NAME}-distributor
+      -m 4096
+      -h 80
+      -s 443
+      -a ${STACK_NAME}-distributor.localtest.me
+      --
+      gateway.useProxyForwardedHeader=true
+      -Dignition.config.mode=${DEPLOYMENT_MODE:-dev}
+
+  engine:
+    <<: [*ignition-common]
+    volumes:
+      - engine-data:/usr/local/bin/ignition/data
+      - ./services/engine/projects:/usr/local/bin/ignition/data/projects
+      # Resource collections
+      - ./services/engine/config/resources/core:/usr/local/bin/ignition/data/config/resources/core
+      - ./services/engine/config/resources/dev:/usr/local/bin/ignition/data/config/resources/dev
+      # Modules
+      - ./shared/modules/MQTT-Engine-signed-5.0.3.modl:/usr/local/bin/ignition/user-lib/modules/MQTT-Engine-signed.modl
+    environment:
+      <<: *ignition-environment
+      GATEWAY_MODULES_ENABLED: |
+        com.inductiveautomation.perspective,
+        com.inductiveautomation.opcua,
+        com.cirruslink.mqtt.engine.gateway
+      ACCEPT_MODULE_LICENSES: com.cirruslink.mqtt.engine.gateway
+      ACCEPT_MODULE_CERTS: com.cirruslink.mqtt.engine.gateway
+    labels:
+      - traefik.hostname=${STACK_NAME}-engine
+      - traefik.enable=true
+    command: >
+      -n ${STACK_NAME}-engine
+      -m 4096
+      -h 80
+      -s 443
+      -a ${STACK_NAME}-engine.localtest.me
+      --
+      gateway.useProxyForwardedHeader=true
+      -Dignition.config.mode=${DEPLOYMENT_MODE:-dev}
+
+  transmission:
+    <<: [*ignition-common]
+    volumes:
+      - transmission-data:/usr/local/bin/ignition/data
+      - ./services/transmission/projects:/usr/local/bin/ignition/data/projects
+      # Resource collections
+      - ./services/transmission/config/resources/core:/usr/local/bin/ignition/data/config/resources/core
+      - ./services/transmission/config/resources/dev:/usr/local/bin/ignition/data/config/resources/dev
+      # Modules
+      - ./shared/modules/MQTT-Transmission-signed-5.0.3.modl:/usr/local/bin/ignition/user-lib/modules/MQTT-transmission-signed.modl
+    environment:
+      <<: *ignition-environment
+      GATEWAY_MODULES_ENABLED: |
+        com.inductiveautomation.perspective,
+        com.inductiveautomation.opcua,
+        com.cirruslink.mqtt.transmission.gateway
+      ACCEPT_MODULE_LICENSES: com.cirruslink.mqtt.transmission.gateway
+      ACCEPT_MODULE_CERTS: com.cirruslink.mqtt.transmission.gateway
+    labels:
+      - traefik.hostname=${STACK_NAME}-transmission
+      - traefik.enable=true
+    command: >
+      -n ${STACK_NAME}-transmission
+      -m 4096
+      -h 80
+      -s 443
+      -a ${STACK_NAME}-transmission.localtest.me
+      --
+      gateway.useProxyForwardedHeader=true
+      -Dignition.config.mode=${DEPLOYMENT_MODE:-dev}
+
+volumes:
+  distributor-data:
+    name: ${STACK_NAME}-distributor-data
+  engine-data:
+    name: ${STACK_NAME}-engine-data
+  transmission-data:
+    name: ${STACK_NAME}-transmission-data
+
+networks:
+  proxy:
+    external: true
