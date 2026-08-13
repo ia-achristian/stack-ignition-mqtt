@@ -1,6 +1,13 @@
 # Project Template
 
-This project template is designed as a base repository for any project. It includes a basic structure for a project to be customized and built upon. For starters, this readme should be updated with pertinent information for the project.
+This project template is designed as a base repository for any Ignition MQTT project. It includes a basic structure for a project to be customized and built upon. For starters, this readme should be updated with pertinent information for the project.
+
+The stack consists of three services:
+
+- `distributor`: An Ignition Gateway with the CirrusLink MQTT Distributor module
+- `engine`: An Ignition Gateway with the CirrusLink MQTT Engine module, and a connection to the Distributor
+- `transmission`: An Ignition Gateway with the CirrusLink MQTT Transmission module, and a connection to the Distributor
+
 
 ## Creating a README
 
